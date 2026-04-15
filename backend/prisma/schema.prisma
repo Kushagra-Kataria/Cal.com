@@ -1,0 +1,59 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+model EventType {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  duration  Int
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  bookings Booking[]
+
+  @@map("event_types")
+}
+
+model Booking {
+  id            String   @id @default(uuid())
+  eventTypeId   String   @map("event_type_id")
+  attendeeName  String   @map("attendee_name")
+  attendeeEmail String   @map("attendee_email")
+  date          String
+  time          String
+  status        String   @default("upcoming")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  eventType EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model AvailabilitySchedule {
+  id        String   @id @default(uuid())
+  name      String
+  timezone  String   @default("Europe/London")
+  isDefault Boolean  @default(false) @map("is_default")
+  schedule  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("availability_schedules")
+}
+
+model App {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String
+  icon        String
+  installed   Boolean @default(false)
+
+  @@map("apps")
+}
