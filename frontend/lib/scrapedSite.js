@@ -261,12 +261,20 @@ function rewriteHtmlDocument(html, currentRoutePath, fileSet) {
       const $element = $(element);
       const text = normalizeAnchorText($element.text());
       const href = normalizeAnchorText($element.attr("href"));
+      const ariaLabel = (($element.attr("aria-label") || "").toLowerCase());
+      const dataAttr = (($element.attr("data-testid") || "").toLowerCase());
 
       if (
         text === "sign in" ||
         text === "login" ||
+        text.includes("sign in") ||
+        text.includes("login") ||
         href === "/login" ||
-        href === "/auth/login"
+        href === "/auth/login" ||
+        ariaLabel.includes("sign in") ||
+        ariaLabel.includes("login") ||
+        dataAttr.includes("signin") ||
+        dataAttr.includes("login")
       ) {
         $element.remove();
       }

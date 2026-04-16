@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://cal-com-qecy.onrender.com";
 const SESSION_KEY = "cal_demo_session";
 
 export async function apiFetch(path, options = {}) {
