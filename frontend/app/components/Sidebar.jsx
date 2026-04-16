@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   IconSearch, IconChevronDown, IconCalendar, IconBookOpen, IconClock,
@@ -19,11 +20,42 @@ const NAV_ITEMS = [
   { href: "/dashboard/insights", icon: IconBarChart, label: "Insights", key: "insights", expandable: true },
 ];
 
-export default function Sidebar() {
+const SIDEBAR_MIN_WIDTH = 60;
+const SIDEBAR_MAX_WIDTH = 400;
+
+export default function Sidebar({ width, onWidthChange }) {
   const pathname = usePathname();
+  const dragStateRef = useRef({ startX: 0, startWidth: width });
+
+  const handleResizeStart = useCallback(
+    (event) => {
+      event.preventDefault();
+      dragStateRef.current = { startX: event.clientX, startWidth: width };
+      document.body.classList.add("dash-resizing-sidebar");
+
+      const onMouseMove = (moveEvent) => {
+        const deltaX = moveEvent.clientX - dragStateRef.current.startX;
+        const nextWidth = Math.min(
+          SIDEBAR_MAX_WIDTH,
+          Math.max(SIDEBAR_MIN_WIDTH, dragStateRef.current.startWidth + deltaX)
+        );
+        onWidthChange(nextWidth);
+      };
+
+      const onMouseUp = () => {
+        document.body.classList.remove("dash-resizing-sidebar");
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    },
+    [onWidthChange, width]
+  );
 
   return (
-    <aside className="dash-sidebar">
+    <aside className="dash-sidebar" style={{ width: `${width}px`, minWidth: `${width}px` }}>
       <div className="dash-sidebar__top">
         <div className="dash-sidebar__profile">
           <div className="dash-avatar">K</div>
@@ -47,10 +79,14 @@ export default function Sidebar() {
             >
               <span className="dash-nav-item__icon"><Icon size={16} /></span>
               <span className="dash-nav-item__label">{item.label}</span>
-              {item.badge && <span className="dash-nav-item__badge">{item.badge}</span>}
-              {item.expandable && (
-                <span className="dash-nav-item__chevron">
-                  <IconChevronDown size={14} />
+              {(item.badge || item.expandable) && (
+                <span className="dash-nav-item__meta">
+                  {item.badge && <span className="dash-nav-item__badge">{item.badge}</span>}
+                  {item.expandable && (
+                    <span className="dash-nav-item__chevron">
+                      <IconChevronDown size={14} />
+                    </span>
+                  )}
                 </span>
               )}
             </Link>
@@ -79,6 +115,13 @@ export default function Sidebar() {
           © 2025 Cal.com, Inc. v4.8.6-beta.69
         </div>
       </div>
+
+      <button
+        type="button"
+        className="dash-sidebar__resize-handle"
+        aria-label="Resize sidebar"
+        onMouseDown={handleResizeStart}
+      />
     </aside>
   );
 }

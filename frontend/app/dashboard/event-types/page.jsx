@@ -1,17 +1,21 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { apiFetch } from "../../../lib/apiClient";
 import {
   IconSearch, IconClock, IconExternalLink, IconLink, IconMoreHorizontal,
   IconPlus, IconX,
 } from "../../components/Icons";
 
-/* ─── Default event data ─── */
-const DEFAULT_EVENTS = [
-  { id: 1, name: "30 min meeting", slug: "/kushagra-kataria-o6ramp/30min", duration: 30, enabled: true },
-  { id: 2, name: "Secret meeting", slug: "/kushagra-kataria-o6ramp/secret", duration: 15, enabled: false },
-  { id: 3, name: "15 min meeting", slug: "/kushagra-kataria-o6ramp/15min", duration: 15, enabled: true },
-];
+function normalizeEventType(eventType) {
+  return {
+    id: eventType.id,
+    name: eventType.name,
+    slug: eventType.slug,
+    duration: eventType.duration,
+    enabled: eventType.enabled,
+  };
+}
 
 /* ─── Toggle ─── */
 function Toggle({ checked, onChange }) {
@@ -46,11 +50,8 @@ function NewEventModal({ onClose, onSave }) {
     e.preventDefault();
     if (!name.trim()) return;
     onSave({
-      id: Date.now(),
       name: name.trim(),
-      slug: `/kushagra-kataria-o6ramp/${name.trim().toLowerCase().replace(/\s+/g, "-")}`,
       duration: parseInt(duration, 10),
-      enabled: true,
     });
   }
 
@@ -145,18 +146,71 @@ function EventCard({ event, onToggle, onCopy, onEdit, onDuplicate, onDelete }) {
 
 /* ─── Event Types Page ─── */
 export default function EventTypesPage() {
-  const [events, setEvents] = useState(DEFAULT_EVENTS);
+  const [events, setEvents] = useState([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadEventTypes() {
+      setLoading(true);
+      try {
+        const payload = await apiFetch("/api/event-types");
+        if (cancelled) {
+          return;
+        }
+        const incoming = Array.isArray(payload.eventTypes) ? payload.eventTypes : [];
+        setEvents(incoming.map(normalizeEventType));
+      } catch (err) {
+        if (!cancelled) {
+          setToastMsg(err.message || "Failed to load event types");
+          setToastVisible(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadEventTypes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredEvents = events.filter((ev) =>
     ev.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleToggle(id, val) {
+  async function handleToggle(id, val) {
+    const current = events.find((ev) => ev.id === id);
+    if (!current) {
+      return;
+    }
+
+    const previous = current.enabled;
     setEvents((prev) => prev.map((ev) => (ev.id === id ? { ...ev, enabled: val } : ev)));
+
+    try {
+      const payload = await apiFetch(`/api/event-types/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ enabled: val }),
+      });
+      const updated = payload.eventType ? normalizeEventType(payload.eventType) : null;
+      if (updated) {
+        setEvents((prev) => prev.map((ev) => (ev.id === id ? updated : ev)));
+      }
+    } catch (err) {
+      setEvents((prev) => prev.map((ev) => (ev.id === id ? { ...ev, enabled: previous } : ev)));
+      setToastMsg(err.message || "Failed to update event");
+      setToastVisible(true);
+    }
   }
 
   function handleCopy(slug) {
@@ -168,32 +222,91 @@ export default function EventTypesPage() {
     });
   }
 
-  function handleDuplicate(id) {
-    setEvents((prev) => {
-      const source = prev.find((ev) => ev.id === id);
-      if (!source) return prev;
-      const copy = { ...source, id: Date.now(), name: `${source.name} (copy)`, slug: `${source.slug}-copy` };
-      const idx = prev.findIndex((ev) => ev.id === id);
-      const next = [...prev];
-      next.splice(idx + 1, 0, copy);
-      return next;
-    });
+  async function handleDuplicate(id) {
+    try {
+      const payload = await apiFetch(`/api/event-types/${id}/duplicate`, {
+        method: "POST",
+      });
+      const duplicate = payload.eventType ? normalizeEventType(payload.eventType) : null;
+      if (!duplicate) {
+        return;
+      }
+      setEvents((prev) => {
+        const sourceIndex = prev.findIndex((ev) => ev.id === id);
+        if (sourceIndex < 0) {
+          return [...prev, duplicate];
+        }
+        const next = [...prev];
+        next.splice(sourceIndex + 1, 0, duplicate);
+        return next;
+      });
+    } catch (err) {
+      setToastMsg(err.message || "Failed to duplicate event");
+      setToastVisible(true);
+    }
   }
 
-  function handleDelete(id) { setEvents((prev) => prev.filter((ev) => ev.id !== id)); }
+  async function handleDelete(id) {
+    const previous = events;
+    setEvents((prev) => prev.filter((ev) => ev.id !== id));
 
-  function handleEdit(id) {
+    try {
+      await apiFetch(`/api/event-types/${id}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      setEvents(previous);
+      setToastMsg(err.message || "Failed to delete event");
+      setToastVisible(true);
+    }
+  }
+
+  async function handleEdit(id) {
     const ev = events.find((e) => e.id === id);
     if (!ev) return;
     const newName = prompt("Edit event name:", ev.name);
     if (newName && newName.trim()) {
+      const previous = { ...ev };
       setEvents((prev) => prev.map((e) =>
-        e.id === id ? { ...e, name: newName.trim(), slug: `/kushagra-kataria-o6ramp/${newName.trim().toLowerCase().replace(/\s+/g, "-")}` } : e
+        e.id === id ? { ...e, name: newName.trim() } : e
       ));
+
+      try {
+        const payload = await apiFetch(`/api/event-types/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ name: newName.trim() }),
+        });
+        const updated = payload.eventType ? normalizeEventType(payload.eventType) : null;
+        if (updated) {
+          setEvents((prev) => prev.map((e) => (e.id === id ? updated : e)));
+        }
+      } catch (err) {
+        setEvents((prev) => prev.map((e) => (e.id === id ? previous : e)));
+        setToastMsg(err.message || "Failed to edit event");
+        setToastVisible(true);
+      }
     }
   }
 
-  function handleSaveNew(ev) { setEvents((prev) => [...prev, ev]); setShowModal(false); }
+  async function handleSaveNew(ev) {
+    try {
+      const payload = await apiFetch("/api/event-types", {
+        method: "POST",
+        body: JSON.stringify({
+          name: ev.name,
+          duration: ev.duration,
+        }),
+      });
+      const created = payload.eventType ? normalizeEventType(payload.eventType) : null;
+      if (created) {
+        setEvents((prev) => [...prev, created]);
+      }
+      setShowModal(false);
+    } catch (err) {
+      setToastMsg(err.message || "Failed to create event");
+      setToastVisible(true);
+    }
+  }
 
   return (
     <>
@@ -215,10 +328,11 @@ export default function EventTypesPage() {
       </div>
 
       <div className="dash-event-list">
-        {filteredEvents.length === 0 && (
+        {loading && <div className="dash-event-list__empty"><p>Loading event types...</p></div>}
+        {!loading && filteredEvents.length === 0 && (
           <div className="dash-event-list__empty"><p>No event types found.</p></div>
         )}
-        {filteredEvents.map((ev) => (
+        {!loading && filteredEvents.map((ev) => (
           <EventCard key={ev.id} event={ev} onToggle={handleToggle} onCopy={handleCopy}
             onEdit={handleEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} />
         ))}

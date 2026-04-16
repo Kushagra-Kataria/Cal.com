@@ -324,6 +324,13 @@ body {
   height: 100vh;
   z-index: 10;
   overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dash-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .dash-sidebar__top {
@@ -391,6 +398,12 @@ body {
   flex: 1;
   padding: 8px;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dash-sidebar__nav::-webkit-scrollbar {
+  display: none;
 }
 
 .dash-nav-item {
@@ -398,7 +411,8 @@ body {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 10px;
+  box-sizing: border-box;
+  padding: 8px 16px 8px 10px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -431,6 +445,15 @@ body {
 
 .dash-nav-item__label {
   flex: 1;
+  min-width: 0;
+}
+
+.dash-nav-item__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .dash-nav-item__badge {
@@ -440,14 +463,12 @@ body {
   color: #aaa;
   border-radius: 4px;
   padding: 1px 5px;
-  margin-left: auto;
 }
 
 .dash-nav-item__chevron {
   transition: transform 0.2s;
   display: flex;
   align-items: center;
-  margin-left: auto;
 }
 
 .dash-nav-item__chevron--open {
@@ -483,6 +504,28 @@ body {
   font-size: 0.6rem;
   color: #555;
   padding: 4px 2px 0;
+}
+
+.dash-sidebar__resize-handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.dash-sidebar__resize-handle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dash-resizing-sidebar {
+  cursor: col-resize;
+  user-select: none;
 }
 
 /* ─── Main Content ─── */
