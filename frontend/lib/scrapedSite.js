@@ -256,31 +256,6 @@ function rewriteHtmlDocument(html, currentRoutePath, fileSet) {
     }
   });
 
-  if (normalizeRoutePath(currentRoutePath) === "/") {
-    $("a, button").each((_, element) => {
-      const $element = $(element);
-      const text = normalizeAnchorText($element.text());
-      const href = normalizeAnchorText($element.attr("href"));
-      const ariaLabel = (($element.attr("aria-label") || "").toLowerCase());
-      const dataAttr = (($element.attr("data-testid") || "").toLowerCase());
-
-      if (
-        text === "sign in" ||
-        text === "login" ||
-        text.includes("sign in") ||
-        text.includes("login") ||
-        href === "/login" ||
-        href === "/auth/login" ||
-        ariaLabel.includes("sign in") ||
-        ariaLabel.includes("login") ||
-        dataAttr.includes("signin") ||
-        dataAttr.includes("login")
-      ) {
-        $element.remove();
-      }
-    });
-  }
-
   const baseTag = $("head base").first();
   if (baseTag.length > 0) {
     baseTag.attr("target", "_top");
@@ -288,14 +263,14 @@ function rewriteHtmlDocument(html, currentRoutePath, fileSet) {
     $("head").prepend('<base target="_top">');
   }
 
-  // Inject script to intercept "Get Started" clicks and notify the parent
+  // Inject script to intercept "Get Started" and "Sign in" clicks and notify the parent
   const interceptScript = `
     <script>
       document.addEventListener('click', function(e) {
         var link = e.target.closest('a');
         if (link) {
           var text = (link.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-          if (text.includes('get started')) {
+          if (text.includes('get started') || text.includes('sign in')) {
             e.preventDefault();
             e.stopPropagation();
             window.top.postMessage({ type: 'cal-get-started' }, '*');
