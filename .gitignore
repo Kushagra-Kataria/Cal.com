@@ -69,3 +69,6 @@ out/
 .env
 .env.local
 .env.*.local
+
+# Exception for frontend lib folder
+!frontend/lib/
