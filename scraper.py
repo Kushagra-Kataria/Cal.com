@@ -8,7 +8,7 @@ base_url = 'https://cal.com'
 visited = set()
 to_visit = [base_url]
 
-os.makedirs('scraped_pages', exist_ok=True)
+os.makedirs('frontend/scraped_pages', exist_ok=True)
 
 while to_visit and len(visited) < 100:  # limit to 100 pages to avoid excessive scraping
     url = to_visit.pop(0)
@@ -21,7 +21,7 @@ while to_visit and len(visited) < 100:  # limit to 100 pages to avoid excessive 
         soup = BeautifulSoup(response.content, 'lxml')
         # save html
         filename = url.replace('https://', '').replace('http://', '').replace('/', '_').replace('.', '_').replace(':', '_') + '.html'
-        with open(os.path.join('scraped_pages', filename), 'w', encoding='utf-8') as f:
+        with open(os.path.join('frontend/scraped_pages', filename), 'w', encoding='utf-8') as f:
             f.write(str(soup))
         # find links
         for link in soup.find_all('a', href=True):
