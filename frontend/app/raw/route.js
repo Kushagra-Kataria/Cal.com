@@ -1,4 +1,8 @@
-import { getRewrittenHtmlByRoute, hasScrapedFileForRoute } from "../../lib/scrapedSite";
+import {
+  getFallbackLandingHtml,
+  getRewrittenHtmlByRoute,
+  hasScrapedFileForRoute,
+} from "../../lib/scrapedSite";
 
 function textResponse(message, status) {
   return new Response(message, {
@@ -14,7 +18,12 @@ export async function GET() {
   const exists = await hasScrapedFileForRoute("/");
 
   if (!exists) {
-    return textResponse("Page not found", 404);
+    return new Response(getFallbackLandingHtml(), {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   try {
@@ -26,6 +35,11 @@ export async function GET() {
       },
     });
   } catch {
-    return textResponse("Page not found", 404);
+    return new Response(getFallbackLandingHtml(), {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
   }
 }
