@@ -1,3 +1,5 @@
+"""FastAPI application — Cal.com clone backend with Neon PostgreSQL."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -5,16 +7,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.database import connect_db, disconnect_db, seed_db
-from app.routes import event_types, bookings, availability, apps
+from app.database import init_db, close_db
+from app.routes import event_types
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    await connect_db()
-    await seed_db()
+    await init_db()
     yield
-    await disconnect_db()
+    await close_db()
 
 
 app = FastAPI(title="Cal.com Clone API", lifespan=lifespan)
@@ -28,9 +29,6 @@ app.add_middleware(
 )
 
 app.include_router(event_types.router, prefix="/api")
-app.include_router(bookings.router, prefix="/api")
-app.include_router(availability.router, prefix="/api")
-app.include_router(apps.router, prefix="/api")
 
 
 @app.get("/api/health")

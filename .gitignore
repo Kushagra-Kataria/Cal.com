@@ -63,8 +63,7 @@ build/
 out/
 .next/
 
-# Scraped pages (generated content)
-scraped_pages/
+
 
 # Environment variables
 .env
